@@ -61,10 +61,15 @@ This repository contains an n8n workflow for automating employee data analysis a
 ---
 
 ### Repository Structure
+
 n8n-data-analysis-workflow/
+
 ├── workflow.json
+
 ├── sample-report.html
+
 └── README.md
+
 
 
 ---
