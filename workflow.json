@@ -1,0 +1,313 @@
+{
+  "name": "My workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "documentId": {
+          "__rl": true,
+          "value": "1dwozYmnMtIxmi44qINB0vXphkn25s3-aAbXgjb-U8J4",
+          "mode": "list",
+          "cachedResultName": "Employee_data",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1dwozYmnMtIxmi44qINB0vXphkn25s3-aAbXgjb-U8J4/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1dwozYmnMtIxmi44qINB0vXphkn25s3-aAbXgjb-U8J4/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1472,
+        96
+      ],
+      "id": "739f43de-a653-4b61-81d4-4e4b11e35dd4",
+      "name": "Google Sheets Trigger",
+      "credentials": {
+        "googleSheetsTriggerOAuth2Api": {
+          "id": "A4MLseWf5Vs5w0No",
+          "name": "Google Sheets Trigger account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are an assistant that summarizes company performance based on given KPIs.\n\nHere are the KPIs:\n- Average Salary: {{$json.averageSalary}}\n- Average Performance Score: {{$json.averagePerformanceScore}}\n- Number of Remote Employees: {{$json.remoteEmployees}}\n\nPlease write a concise business summary (3-4 sentences) highlighting:\n1. The overall salary situation.\n2. The employee performance trend.\n3. Insights about remote work.\n\nKeep the tone professional and easy to understand.\n",
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        -672,
+        -208
+      ],
+      "id": "ed1dbbf0-6472-4cbe-a8db-00a3c766a8ef",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -624,
+        -64
+      ],
+      "id": "6787026f-4a26-4f81-bdda-7cded9dd013a",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "sw9gqM35iPWxkyt0",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "numberInputs": 3
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -240,
+        80
+      ],
+      "id": "302bab60-365d-4fd6-98a1-05e9901a0a1f",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst cleanedItems = items.map((item) => {\n  if (!item?.json?.salary) {\n    item.json.salary = \"N/A\";\n  }\n  return item;\n});\nreturn cleanedItems;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1232,
+        96
+      ],
+      "id": "d764e09c-8e28-4c99-a3c5-7feb0d450929",
+      "name": "Data Cleaning"
+    },
+    {
+      "parameters": {
+        "sendTo": "generativeaide@gmail.com",
+        "subject": "N8n Workflow",
+        "message": "={{ $json.htmlReport }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        192,
+        96
+      ],
+      "id": "0250d4a3-9335-436b-99f2-a4dd8568acaf",
+      "name": "Send a message",
+      "webhookId": "9a1f3088-7263-42d1-b689-3fb002f04029",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "IIoV6KBrJlhtU07m",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all().map((item) => item.json);\n\n// KPI 1: Average Salary (exclude missing/invalid salaries)\nconst salaries = items\n  .map((item) => Number(item.salary)) // convert to number\n  .filter((salary) => !isNaN(salary)); // remove invalid\n\nconst totalSalary = salaries.reduce((sum, s) => sum + s, 0);\nconst averageSalary = salaries.length > 0 ? totalSalary / salaries.length : 0;\n\n// KPI 2: Average Performance Score\nconst totalPerformanceScore = items.reduce(\n  (sum, item) => sum + Number(item.performance_score || 0),\n  0,\n);\nconst averagePerformanceScore = totalPerformanceScore / items.length;\n\n// KPI 3: Number of Remote Employees (case-insensitive)\nconst remoteEmployees = items.filter(\n  (item) => String(item.remote).toLowerCase() === \"yes\",\n).length;\n\n// KPI 4: Performance Bar Chart\nconst performanceBarChart = items.map((item) => ({\n  name: item.name,\n  performance_score: Number(item.performance_score || 0),\n}));\n\nreturn {\n  averageSalary,\n  averagePerformanceScore,\n  remoteEmployees,\n  performanceBarChart,\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1024,
+        96
+      ],
+      "id": "e813e585-714b-490a-ac7f-9f101d3a7601",
+      "name": "KPI Generation"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://quickchart.io/chart/create",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"chart\": {\n    \"type\": \"bar\",\n    \"data\": {\n      \"labels\": [\n        \"Alice\",\n        \"Bob\",\n        \"Charlie\",\n        \"David\",\n        \"Eve\",\n        \"Frank\",\n        \"Grace\",\n        \"Helen\",\n        \"Ivy\",\n        \"Jack\",\n        \"Kevin\",\n        \"Laura\",\n        \"Mike\",\n        \"Nina\",\n        \"Oscar\",\n        \"Paul\",\n        \"Quinn\",\n        \"Rachel\",\n        \"Steve\",\n        \"Tina\"\n      ],\n      \"datasets\": [\n        {\n          \"label\": \"Performance Score\",\n          \"data\": [\n            9, 10, 10, 1, 8, 7, 8, 7, 3, 8, 1, 8, 9, 5, 3, 7, 4, 8, 6, 7\n          ],\n          \"backgroundColor\": \"rgba(54, 162, 235, 0.6)\",\n          \"borderColor\": \"rgba(54, 162, 235, 1)\",\n          \"borderWidth\": 1\n        }\n      ]\n    },\n    \"options\": {\n      \"responsive\": true,\n      \"plugins\": {\n        \"legend\": {\n          \"position\": \"top\"\n        },\n        \"title\": {\n          \"display\": true,\n          \"text\": \"Employee Performance Scores\"\n        }\n      },\n      \"scales\": {\n        \"y\": {\n          \"beginAtZero\": true,\n          \"title\": {\n            \"display\": true,\n            \"text\": \"Performance Score\"\n          }\n        },\n        \"x\": {\n          \"title\": {\n            \"display\": true,\n            \"text\": \"Employee Name\"\n          }\n        }\n      }\n    }\n  }\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -624,
+        96
+      ],
+      "id": "e3abff3d-69a7-456a-8f1f-975884d08e14",
+      "name": "Employee by Performance"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://quickchart.io/chart/create",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"chart\": {\n    \"type\": \"doughnut\",\n    \"data\": {\n      \"labels\": [\n        \"< 50k\",\n        \"50k - 70k\",\n        \"70k - 90k\",\n        \"> 90k\"\n      ],\n      \"datasets\": [\n        {\n          \"label\": \"Employees by Salary Range\",\n          \"data\": [3, 5, 8, 2],\n          \"backgroundColor\": [\n            \"rgba(255, 99, 132, 0.6)\",\n            \"rgba(54, 162, 235, 0.6)\",\n            \"rgba(255, 206, 86, 0.6)\",\n            \"rgba(75, 192, 192, 0.6)\"\n          ],\n          \"borderColor\": [\n            \"rgba(255, 99, 132, 1)\",\n            \"rgba(54, 162, 235, 1)\",\n            \"rgba(255, 206, 86, 1)\",\n            \"rgba(75, 192, 192, 1)\"\n          ],\n          \"borderWidth\": 1\n        }\n      ]\n    },\n    \"options\": {\n      \"plugins\": {\n        \"title\": {\n          \"display\": true,\n          \"text\": \"Employee Distribution by Salary Range\"\n        },\n        \"legend\": {\n          \"position\": \"bottom\"\n        }\n      }\n    }\n  }\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -608,
+        368
+      ],
+      "id": "8011bf1d-a5f5-478e-8635-484ff60e8152",
+      "name": "Salary Ranges"
+    },
+    {
+      "parameters": {
+        "jsCode": "const kpiData = $(\"KPI Generation\").all()[0]?.json;\nconst performanceChartUrl = $(\"Employee by Performance\").all()[0]?.json?.url;\nconst salaryChartUrl = $(\"Salary Ranges\").all()[0]?.json?.url;\nconst googleSheetLink = \"https://docs.google.com/spreadsheets/d/1dwozYmnMtIxmi44qINB0vXphkn25s3-aAbXgjb-U8J4/edit?usp=sharing\"\nconst htmlReport = `\n<!DOCTYPE html>\n<html>\n<head>\n    <title>Employee Performance & KPI Report</title>\n    <style>\n        body {\n            font-family: Arial, sans-serif;\n        }\n        table {\n            width: 100%;\n            margin-bottom: 20px;\n        }\n        th, td {\n            padding: 10px;\n            text-align: left;\n            border-bottom: 1px solid #ddd;\n        }\n    </style>\n</head>\n<body>\n    <h1>Employee Performance & KPI Report</h1>\n    <h2>KPI Summary</h2>\n    <table>\n        <tr>\n            <th>Average Salary</th>\n            <td>${kpiData.averageSalary}</td>\n        </tr>\n        <tr>\n            <th>Average Performance Score</th>\n            <td>${kpiData.averagePerformanceScore}</td>\n        </tr>\n        <tr>\n            <th>Remote Employees</th>\n            <td>${kpiData.remoteEmployees}</td>\n        </tr>\n    </table>\n    <h2>Performance Scores by Employee</h2>\n    <img src=\"${performanceChartUrl}\" alt=\"Performance Chart\">\n    <h2>Salary Ranges</h2>\n    <img src=\"${salaryChartUrl}\" alt=\"Salary Chart\">\n    <h2>Google Sheets Data</h2>\n    <a href=\"${googleSheetLink}\">View Data in Google Sheets</a>\n</body>\n</html>\n`;\n\nreturn { htmlReport };\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -16,
+        96
+      ],
+      "id": "d4c47f6d-b58e-4cf5-8376-9f3ec6b7c6ea",
+      "name": "HTML Report Generation"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Google Sheets Trigger": {
+      "main": [
+        [
+          {
+            "node": "Data Cleaning",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "HTML Report Generation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Data Cleaning": {
+      "main": [
+        [
+          {
+            "node": "KPI Generation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "KPI Generation": {
+      "main": [
+        [
+          {
+            "node": "Employee by Performance",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Salary Ranges",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Employee by Performance": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Salary Ranges": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "HTML Report Generation": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "ad3f1e22-d24c-4885-9681-89b9b2a8db85",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "7b74ee6c93aa28a5488dfb6805693dfe4a5df95923db1b2f89b764df7185e673"
+  },
+  "id": "9afVhyKDlNdCg3hE",
+  "tags": []
+}
