@@ -5,6 +5,9 @@ This repository contains an n8n workflow for automating employee data analysis a
 
 ---
 
+<img width="1570" height="601" alt="Screenshot 2025-08-24 111938" src="https://github.com/user-attachments/assets/bc3b2e45-7141-4d18-91d8-99ad1077293b" />
+
+
 ## Key Features
 
 ### Data Ingestion
