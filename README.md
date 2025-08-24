@@ -69,7 +69,6 @@ n8n-employee-insights/
 
 ---
 
-HTML Report  
+### HTML Report: https://athee010.github.io/n8n-data-analysis-workflow/report.html
 
-## Repository Structure
 
